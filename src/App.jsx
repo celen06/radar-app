@@ -17,24 +17,32 @@ export default function RadarApp() {
     reader.readAsText(file);
   };
 
-  const parseXML = (xmlString) => {
-    try {
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlString, "text/xml");
-      const elements = xmlDoc.getElementsByTagName("*");
-      let parsed = [];
+  
+const parseXML = (xmlString) => {
+  try {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+    const params = xmlDoc.getElementsByTagName("p");
 
-      for (let i = 0; i < elements.length; i++) {
-        const el = elements[i];
-        if (el.children.length === 0 && el.textContent.trim()) {
-          parsed.push({ tag: el.tagName, value: el.textContent });
-        }
-      }
-      return parsed;
-    } catch {
-      return [];
+    let parsed = [];
+
+    for (let i = 0; i < params.length; i++) {
+      const el = params[i];
+      const name = el.getAttribute("name");
+      const value = el.textContent.trim();
+
+      // ✅ Use real parameter name instead of generic 'p'
+      parsed.push({
+        Parameter: name,
+        Value: value
+      });
     }
-  };
+
+    return parsed;
+  } catch {
+    return [];
+  }
+};
 
   // ✅ AUTO PROCESS: Convert / Audit
   useEffect(() => {
