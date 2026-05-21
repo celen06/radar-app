@@ -31,11 +31,10 @@ export default function RadarApp() {
 
   const exportToExcel = () => {
     if (!data.length) return;
-
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Results");
-    XLSX.writeFile(workbook, `RADAR_${tab}_results.xlsx`);
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Results");
+    XLSX.writeFile(wb, `RADAR_${tab}.xlsx`);
   };
 
   const handleConvert = () => {
@@ -45,7 +44,6 @@ export default function RadarApp() {
 
   const handleCompare = () => {
     if (!xml1 || !xml2) return;
-
     const d1 = parseXML(xml1);
     const d2 = parseXML(xml2);
 
@@ -86,7 +84,7 @@ export default function RadarApp() {
       let status = "OK";
       let expected = "";
 
-      if (rule.min !== undefined && rule.max !== undefined) {
+      if (rule.min !== undefined) {
         expected = `${rule.min} to ${rule.max}`;
         const val = Number(item.value);
         if (val < rule.min || val > rule.max) status = "Fail";
@@ -119,16 +117,34 @@ export default function RadarApp() {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>RADAR XML Analyzer</h1>
+    <div style={{ fontFamily: "Arial", background: "#0f172a", color: "white", minHeight: "100vh", padding: "20px" }}>
+      <h1 style={{ fontSize: "28px", marginBottom: "20px", color: "#38bdf8" }}>
+        RADAR XML Analyzer (Professional)
+      </h1>
 
-      <div style={{ marginBottom: "10px" }}>
-        <button onClick={() => setTab("convert")}>Convert</button>
-        <button onClick={() => setTab("compare")}>Compare</button>
-        <button onClick={() => setTab("audit")}>Audit</button>
+      {/* Tabs */}
+      <div style={{ marginBottom: "15px" }}>
+        {["convert", "compare", "audit"].map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            style={{
+              marginRight: "10px",
+              padding: "10px 15px",
+              background: tab === t ? "#38bdf8" : "#1e293b",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
+              cursor: "pointer"
+            }}
+          >
+            {t.toUpperCase()}
+          </button>
+        ))}
       </div>
 
-      <div style={{ border: "1px solid #ccc", padding: "10px" }}>
+      {/* Upload Panel */}
+      <div style={{ background: "#1e293b", padding: "15px", borderRadius: "8px" }}>
         <input type="file" accept=".xml" onChange={e => readFile(e.target.files[0], setXml1)} />
         {tab === "compare" && (
           <input type="file" accept=".xml" onChange={e => readFile(e.target.files[0], setXml2)} />
@@ -141,46 +157,32 @@ export default function RadarApp() {
           <button onClick={exportToExcel}>Export Excel</button>
         </div>
 
-        <div style={{ marginTop: "10px" }}>
-          <input
-            placeholder="Search parameter"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
+        <input
+          placeholder="Search parameter"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ marginTop: "10px", width: "100%" }}
+        />
       </div>
 
-      {filteredData.length > 0 && (
-        <table border="1" style={{ marginTop: "20px", width: "100%" }}>
+      {/* Table */}
+      {filteredData && filteredData.length > 0 && (
+        <table style={{ width: "100%", marginTop: "20px", borderCollapse: "collapse" }}>
           <thead>
-            <tr>
+            <tr style={{ background: "#334155" }}>
               <th>Parameter</th>
-              {tab === "compare" && <>
-                <th>Baseline</th>
-                <th>Current</th>
-              </>}
-              {tab === "audit" && <>
-                <th>Value</th>
-                <th>Expected</th>
-              </>}
+              {tab === "compare" && <><th>Baseline</th><th>Current</th></>}
+              {tab === "audit" && <><th>Value</th><th>Expected</th></>}
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
             {filteredData.map((row, i) => (
-              <tr key={i}>
+              <tr key={i} style={{ borderBottom: "1px solid #334155" }}>
                 <td>{row.Parameter || row.tag}</td>
-                {tab === "compare" && <>
-                  <td>{row.Baseline}</td>
-                  <td>{row.Current}</td>
-                </>}
-                {tab === "audit" && <>
-                  <td>{row.Value}</td>
-                  <td>{row.Expected}</td>
-                </>}
-                <td style={{ color: statusColor(row.Status) }}>
-                  {row.Status || "OK"}
-                </td>
+                {tab === "compare" && <><td>{row.Baseline}</td><td>{row.Current}</td></>}
+                {tab === "audit" && <><td>{row.Value}</td><td>{row.Expected}</td></>}
+                <td style={{ color: statusColor(row.Status) }}>{row.Status || "OK"}</td>
               </tr>
             ))}
           </tbody>
