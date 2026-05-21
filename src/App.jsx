@@ -19,38 +19,46 @@ export default function RadarApp() {
 
   
 
+
 const parseXML = (xmlString) => {
   try {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, "text/xml");
 
-    const params = xmlDoc.getElementsByTagName("p");
+    const objects = xmlDoc.getElementsByTagName("managedObject");
+    let results = [];
 
-    let row = {};
-    let siteName = "";
+    for (let i = 0; i < objects.length; i++) {
+      const obj = objects[i];
+      const params = obj.getElementsByTagName("p");
 
-    for (let i = 0; i < params.length; i++) {
-      const el = params[i];
-      const name = el.getAttribute("name");
-      const value = el.textContent.trim();
+      let row = {};
+      let siteName = "";
 
-      // ✅ Extract site name (special parameter)
-      if (name === "name") {
-        siteName = value;
+      for (let j = 0; j < params.length; j++) {
+        const el = params[j];
+        const name = el.getAttribute("name");
+        const value = el.textContent.trim();
+
+        if (name === "name") {
+          siteName = value;
+        }
+
+        row[name] = value;
       }
 
-      // ✅ Build column structure: Parameter = column
-      row[name] = value;
+      // ✅ Add site name or fallback to object id
+      if (siteName) {
+        row = { name: siteName, ...row };
+      } else {
+        const distName = obj.getAttribute("distName") || `Object_${i}`;
+        row = { name: distName, ...row };
+      }
+
+      results.push(row);
     }
 
-    // ✅ Add site identifier as first column
-    if (siteName) {
-      row = { name: siteName, ...row };
-    }
-
-    // ✅ Return as single row (for Excel columns)
-    return [row];
-
+    return results;
   } catch {
     return [];
   }
