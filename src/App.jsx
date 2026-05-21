@@ -18,31 +18,44 @@ export default function RadarApp() {
   };
 
   
+
 const parseXML = (xmlString) => {
   try {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+
     const params = xmlDoc.getElementsByTagName("p");
 
-    let parsed = [];
+    let row = {};
+    let siteName = "";
 
     for (let i = 0; i < params.length; i++) {
       const el = params[i];
       const name = el.getAttribute("name");
       const value = el.textContent.trim();
 
-      // ✅ Use real parameter name instead of generic 'p'
-      parsed.push({
-        Parameter: name,
-        Value: value
-      });
+      // ✅ Extract site name (special parameter)
+      if (name === "name") {
+        siteName = value;
+      }
+
+      // ✅ Build column structure: Parameter = column
+      row[name] = value;
     }
 
-    return parsed;
+    // ✅ Add site identifier as first column
+    if (siteName) {
+      row = { name: siteName, ...row };
+    }
+
+    // ✅ Return as single row (for Excel columns)
+    return [row];
+
   } catch {
     return [];
   }
 };
+
 
   // ✅ AUTO PROCESS: Convert / Audit
   useEffect(() => {
