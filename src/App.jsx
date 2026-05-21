@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 
 export default function RadarApp() {
@@ -8,6 +8,7 @@ export default function RadarApp() {
   const [data, setData] = useState([]);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("convert");
+  const [statusMsg, setStatusMsg] = useState("");
 
   const readFile = (file, setter) => {
     if (!file) return;
@@ -30,48 +31,34 @@ export default function RadarApp() {
         }
       }
       return parsed;
-    } catch (e) {
-      console.error("XML parse error", e);
+    } catch {
       return [];
     }
   };
 
-  const exportToExcel = () => {
-    console.log("Export clicked", data);
-
-    if (!data || data.length === 0) {
-      alert("No data to export!");
-      return;
+  // ✅ AUTO PROCESS: Convert / Audit
+  useEffect(() => {
+    if (tab === "convert" && xml1) {
+      const parsed = parseXML(xml1);
+      setData(parsed);
+      setStatusMsg("✅ XML uploaded and converted successfully");
     }
 
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Results");
-    XLSX.writeFile(wb, `RADAR_${tab}.xlsx`);
-  };
-
-  const handleConvert = () => {
-    console.log("Convert clicked", xml1);
-
-    if (!xml1) {
-      alert("Upload XML file first");
-      return;
+    if (tab === "audit" && xml1) {
+      runAudit(xml1);
     }
+  }, [xml1, tab]);
 
-    const parsed = parseXML(xml1);
-    setData(parsed);
-  };
-
-  const handleCompare = () => {
-    console.log("Compare clicked", xml1, xml2);
-
-    if (!xml1 || !xml2) {
-      alert("Upload both XML files!");
-      return;
+  // ✅ AUTO PROCESS: Compare when BOTH files exist
+  useEffect(() => {
+    if (tab === "compare" && xml1 && xml2) {
+      runCompare(xml1, xml2);
     }
+  }, [xml1, xml2, tab]);
 
-    const d1 = parseXML(xml1);
-    const d2 = parseXML(xml2);
+  const runCompare = (file1, file2) => {
+    const d1 = parseXML(file1);
+    const d2 = parseXML(file2);
 
     let results = [];
 
@@ -95,19 +82,12 @@ export default function RadarApp() {
       }
     });
 
-    console.log("Compare results", results);
     setData(results);
+    setStatusMsg("✅ Comparison completed");
   };
 
-  const handleAudit = () => {
-    console.log("Audit clicked", xml1);
-
-    if (!xml1) {
-      alert("Upload XML file first");
-      return;
-    }
-
-    const parsed = parseXML(xml1);
+  const runAudit = (file) => {
+    const parsed = parseXML(file);
 
     const rules = {
       qRxLevMin: { min: -140, max: -44 },
@@ -149,8 +129,20 @@ export default function RadarApp() {
       }
     });
 
-    console.log("Audit results", results);
     setData(results);
+    setStatusMsg("✅ Audit completed");
+  };
+
+  const exportToExcel = () => {
+    if (!data || data.length === 0) {
+      alert("No data to export!");
+      return;
+    }
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Results");
+    XLSX.writeFile(wb, `RADAR_${tab}.xlsx`);
   };
 
   const filteredData = (data || []).filter(row =>
@@ -187,32 +179,22 @@ export default function RadarApp() {
         ))}
       </div>
 
-      {/* Upload */}
       <div style={{ padding: "10px", background: "#1e293b", marginTop: "15px" }}>
         <input
           type="file"
           accept=".xml"
-          onChange={e => {
-            readFile(e.target.files[0], setXml1);
-            console.log("XML1 loaded");
-          }}
+          onChange={e => readFile(e.target.files[0], setXml1)}
         />
 
         {tab === "compare" && (
           <input
             type="file"
             accept=".xml"
-            onChange={e => {
-              readFile(e.target.files[0], setXml2);
-              console.log("XML2 loaded");
-            }}
+            onChange={e => readFile(e.target.files[0], setXml2)}
           />
         )}
 
         <div style={{ marginTop: "10px" }}>
-          {tab === "convert" && <button type="button" onClick={handleConvert}>Load XML</button>}
-          {tab === "compare" && <button type="button" onClick={handleCompare}>Run Delta</button>}
-          {tab === "audit" && <button type="button" onClick={handleAudit}>Run Audit</button>}
           <button type="button" onClick={exportToExcel}>Export Excel</button>
         </div>
 
@@ -223,10 +205,10 @@ export default function RadarApp() {
           style={{ marginTop: "10px", width: "100%" }}
         />
 
+        <p>{statusMsg}</p>
         <p>Records: {data.length}</p>
       </div>
 
-      {/* Table */}
       {filteredData.length > 0 && (
         <table style={{ width: "100%", marginTop: "20px" }}>
           <thead>
